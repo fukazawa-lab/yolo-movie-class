@@ -1,0 +1,4 @@
+classes= 1
+train=/content/yolo-movie-class/src/data/custom/train.txt
+valid=/content/yolo-movie-class/src/data/custom/valid.txt
+names=/content/yolo-movie-class/src/data/custom/classes.names

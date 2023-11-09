@@ -14,8 +14,8 @@ import imageio
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--input_gif_path", type=str, default='yolo-movie-class/anim.gif', help="path to input gif file")
-    parser.add_argument("--output_gif_path", type=str, default='output.gif', help="path to output gif file")
+    parser.add_argument("--input_mp4_path", type=str, default='input.mp4', help="path to input mp4 file")  # 変更
+    parser.add_argument("--output_mp4_path", type=str, default='output.mp4', help="path to output mp4 file")  
     parser.add_argument("--model_def", type=str, default="/content/yolo-movie-class/src/config/yolov3-custom.cfg", help="path to model definition file")
     parser.add_argument("--weights_path", type=str, default="/content/yolo-movie-class/src/weights/yolov3_ckpt_200.pth", help="path to weights file")
     parser.add_argument("--class_path", type=str, default="/content/yolo-movie-class/src/data/custom/classes.names", help="path to class label file")
@@ -35,18 +35,20 @@ if __name__ == "__main__":
     classes = load_classes(opt.class_path)  # Extract class labels from file
     Tensor = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
 
-    # OpenCVを使用してGIFファイルを読み込む
-    gif_reader = cv2.VideoCapture(opt.input_gif_path)
-    frame_count = int(gif_reader.get(cv2.CAP_PROP_FRAME_COUNT))
+    # OpenCVを使用してMP4ファイルを読み込む
+    mp4_reader = cv2.VideoCapture(opt.input_mp4_path)
+    frame_count = int(mp4_reader.get(cv2.CAP_PROP_FRAME_COUNT))
     
-    # GIFファイルを保存するためのwriterを設定
-    gif_writer = imageio.get_writer(opt.output_gif_path, duration=0.1, loop=0)  # フレームごとの表示時間とループ再生を設定
+    # MP4ファイルを保存するためのwriterを設定
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    mp4_writer = cv2.VideoWriter(opt.output_mp4_path, fourcc, 10.0, (416, 416))  # フレームごとの表示時間を設定
 
+    dynamic_conf_thres = 0.01  # ここを調整してください
     
     # 各フレームに対して処理
     for frame_index in range(frame_count):
         # フレームを読み込む
-        ret, frame = gif_reader.read()
+        ret, frame = mp4_reader.read()
         if not ret:
             break
 
@@ -69,7 +71,7 @@ if __name__ == "__main__":
 
         with torch.no_grad():
             detections = model(x)
-            detections = non_max_suppression(detections, opt.conf_thres, opt.nms_thres)  # 動的に設定したスコアを使用
+            detections = non_max_suppression(detections, dynamic_conf_thres, opt.nms_thres)  # 動的に設定したスコアを使用
 
         detections = detections[0]
         if detections is not None:
@@ -80,11 +82,9 @@ if __name__ == "__main__":
                 x1, y1, x2, y2 = map(int, [x1, y1, x2, y2])
                 cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
         
-        converted_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) 
-
         # 画像を保存
-        gif_writer.append_data(converted_frame)
+        mp4_writer.write(frame)
     
     # リソースを解放
-    gif_reader.release()
-    gif_writer.close()
+    mp4_reader.release()
+    mp4_writer.release()  # 注意：mp4_writerをリリースする必要があります

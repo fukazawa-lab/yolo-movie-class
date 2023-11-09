@@ -55,10 +55,9 @@ if __name__ == "__main__":
     x = F.upsample(x, size=(ih, iw), mode='bilinear')  # x = (1, 3, 416, 416)
     x = x.to(device)
 
-    dynamic_conf_thres = 0.01  # ここを調整してください
     with torch.no_grad():
         detections = model(x)
-        detections = non_max_suppression(detections, dynamic_conf_thres, opt.nms_thres)  # 動的に設定したスコアを使用
+        detections = non_max_suppression(detections, opt.conf_thres, opt.nms_thres)  # 動的に設定したスコアを使用
 
     detections = detections[0]
     if detections is not None:
